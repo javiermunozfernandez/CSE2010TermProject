@@ -80,7 +80,12 @@ public class ScrabblePlayer {
      */
     public ScrabbleWord getScrabbleWord(final char[][] board, final char[] availableLetters) {
         final ScrabbleWord wordOnBoard = findWord(board);
-        final ScrabbleWord result = tree.getBestWord(wordOnBoard, availableLetters);
+        Arrays.sort(availableLetters);
+        char[] hand = new char[availableLetters.length];
+        for (int i = 0; i < hand.length; i++) {
+            hand[i] = availableLetters[hand.length - 1 - i];
+        }
+        final ScrabbleWord result = tree.getBestWord(wordOnBoard, hand);
         return result;
     }
     /**

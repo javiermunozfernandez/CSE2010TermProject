@@ -58,6 +58,9 @@ public class Trie {
                                             'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
                                             'U', 'V', 'W', 'X', 'Y', 'Z'};
     private static final int BOARD_SIZE = 15;
+    private static final int THRESHOLD = 15; //As soon as we find a word worth this amount of points, return it.
+    private static final int SECOND_THRESHOLD = 0; //If the result from extending/suffixes is more than this, return it.
+                                                   //Otherwise, search prefixes
     private static class Entry {
         /*
          * Description:
@@ -138,7 +141,7 @@ public class Trie {
         result = extendsBoard(word, hand, result, "");
         //Case 2: Best result is perpendicular, starting with a letter already on the board
         result = startOnBoard(word, hand, root, "", result);
-        if (result.getPoints() > 0) {
+        if (result.getPoints() > SECOND_THRESHOLD) {
             return result; //return here to save on time
         }
         //Case 3: Best result is perpendicular, starting before a letter on the board
@@ -219,6 +222,9 @@ public class Trie {
         } else {
             result = startOnBoard(word, hand, current, str, result);
             result = extendsBoard(word, hand, result, str);
+            if (result.getPoints() > THRESHOLD) {
+                return result;
+            }
             char lastChar = '!';
             for (int i = 0; i < hand.length; i++) {
                 final char c = hand[i];
@@ -228,6 +234,9 @@ public class Trie {
                     final Entry next = current.children[getIndex(c)];
                     if (next != null ) {
                         result = getPrefixes(hand, word, str + next, next, result, iteration + 1);
+                        if (result.getPoints() > THRESHOLD) {
+                            return result;
+                        }
                     }
                     hand[i] = c;
                 }
@@ -261,6 +270,9 @@ public class Trie {
                         continue;
                     }
                     result = getSuffixes(firstLetter, prefix + firstLetter, spaceLeft, hand, result, word, newCol, newRow, 'h');
+                    if (result.getPoints() > THRESHOLD) {
+                        return result;
+                    }
                 } else {
                     final int spaceLeft = BOARD_SIZE - (word.getStartRow() + 1);
                     final int newCol = i + word.getStartColumn();
@@ -269,6 +281,9 @@ public class Trie {
                         continue;
                     }
                     result = getSuffixes(firstLetter, prefix + firstLetter, spaceLeft, hand, result, word, newCol, newRow, 'v');
+                    if (result.getPoints() > THRESHOLD) {
+                        return result;
+                    }
                 }
             }
         }
@@ -309,6 +324,9 @@ public class Trie {
                 result = newWord;
             }
         }
+        if (result.getPoints() > THRESHOLD) {
+            return result;
+        }
         if (spaceLeft > 1) {
             char lastChar = '!';
             for (int i = 0; i < hand.length; i++) {
@@ -318,7 +336,10 @@ public class Trie {
                     hand[i] = '!';
                     final Entry newEntry = currentEntry.children[getIndex(c)];
                     if (newEntry != null) {
-                        result = getSuffixes(newEntry, currentString + newEntry, spaceLeft - 1, hand, result, word, startCol, startRow, orientation);    
+                        result = getSuffixes(newEntry, currentString + newEntry, spaceLeft - 1, hand, result, word, startCol, startRow, orientation);
+                        if (result.getPoints() > THRESHOLD) {
+                            return result;
+                        }
                     }
                     hand[i] = c;
                 }

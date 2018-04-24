@@ -196,13 +196,13 @@ public class EvalScrabblePlayer {
         char[]   availableLettersClone = availableLetters.clone();
 
         //Calculate the time taken to find the words on the board
-        //long startTime = bean.getCurrentThreadCpuTime();
-        long startTime  = System.nanoTime();
+        long startTime = bean.getCurrentThreadCpuTime();
+        //long startTime  = System.nanoTime();
         //Play the game of Scrabble and find the words
         ScrabbleWord playerWord = player.getScrabbleWord(boardClone, availableLettersClone);
         
-        //long endTime = bean.getCurrentThreadCpuTime();
-        long endTime = System.nanoTime();
+        long endTime = bean.getCurrentThreadCpuTime();
+        //long endTime = System.nanoTime();
         //System.out.println(endTime - startTime);
         if ((endTime - startTime)/1.0E9 > 1)  // longer than 1 second
             {
