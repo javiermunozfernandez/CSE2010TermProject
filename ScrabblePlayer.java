@@ -42,6 +42,7 @@ public class ScrabblePlayer {
     Trie tree = new Trie();
     // initialize ScrabblePlayer with a file of English words
     public ScrabblePlayer(final String wordFile) {
+        tree.initializeIndexes();
         final File inputFile = new File(wordFile);
         final Scanner inputData;
         try {
@@ -101,8 +102,10 @@ public class ScrabblePlayer {
                       orientation = 'h';                   //Then horizontal
                   } else if (board[row + 1][col] != ' '){  //If next letter is down
                       orientation = 'v';                   //It's vertical
+                  } else if (row > col){
+                      orientation = 'v';
                   } else {
-                      orientation = 'o'; //Single character words don't have a specific direction
+                      orientation = 'h';
                   }
                   final String word = getWord(orientation, board, row, col);
                   return new ScrabbleWord(word, row, col, orientation);

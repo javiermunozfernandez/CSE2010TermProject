@@ -1,5 +1,4 @@
 
-
 /*
   Authors (group members):Javier Munoz, Sung-Jun Baek, Thanart Pandey
   Email addresses of group members: jmunoz2014@my.fit.edu, sbaek2015@my.fit.edu, tpandey2017@my.fit.edu
@@ -59,7 +58,6 @@ public class Trie {
                                             'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
                                             'U', 'V', 'W', 'X', 'Y', 'Z'};
     private static final int BOARD_SIZE = 15;
-    public static long TOTAL_TIME = 0;
     private static class Entry {
         /*
          * Description:
@@ -75,15 +73,15 @@ public class Trie {
          */
         private final byte index; //we use byte instead of char because byte is 8 bit and char is 16 bit
         boolean isWordEnd = false;
-		private final Entry[] children = new Entry[ALPHABET.length];
-		Entry(final char theElement) {
-		    if (theElement == '!') { //Is root
-		        index = -1;
-		    } else {
-		          //The following gives index the index of theElement in alphabet, assuming it is A-Z
-	            index = (byte) ((Character.hashCode(theElement) + OFFSET) % ALPHABET.length);
-		    }
-		} 
+        private final Entry[] children = new Entry[ALPHABET.length];
+        Entry(final char theElement) {
+            if (theElement == '!') { //Is root
+                index = -1;
+            } else {
+                  //The following gives index the index of theElement in alphabet, assuming it is A-Z
+                index = (byte) ((Character.hashCode(theElement) + OFFSET) % ALPHABET.length);
+            }
+        } 
         public String toString() {
             if (index == -1) { //Is root
                 return "";
@@ -129,65 +127,50 @@ public class Trie {
 
     }
     /**
-     * Returns the best word to play using two cases:
-     *  First: the newWord is perpendicular to the original word and starts with a letter from originalWord
-     *  Second: the newWord is the originalWord + a suffix
-     * returns the best word from those two cases
+     * Returns the best word
      * @param word
      * @param hand
      * @return
      */
-	public ScrabbleWord getBestWord(final ScrabbleWord word, final char[] hand) {
-	    ScrabbleWord result = new ScrabbleWord();
-	    final int col = word.getStartColumn();
-	    final int row = word.getStartRow();
-	    final boolean originalIsHorizontal = word.getOrientation() == 'h'; //is the original word horizontal?
-
-	    //Case 1: Best result is perpendicular, starting with a letter already on the board
-	    result = startOnBoard(word, hand, root, "", result);
-	    if (result.getPoints() > 0) {
-	        return result;
-	    }
-	    if (originalIsHorizontal) {
-	        //Case 2: Word is perpendicular, with a prefix
-	        result = getPrefixes(hand, row, word, "", root, result);
-	        //Case 3: Best result is an extension of the word on board (suffix)
-	        if (word.getScrabbleWord().length() > 1) { //following only works if word is at least two char long
-	            final int spaceRight = BOARD_SIZE - (col + word.getScrabbleWord().length()); //space right of word
-	            result = extendsBoard(word, hand, result, col, row, 'h', spaceRight);
-	        } 
-	    } else {
-	        //Case 2
-            result = getPrefixes(hand, col, word, "", root, result);
-            //Case 3
-	        if (word.getScrabbleWord().length() > 1) {
-	            final int spaceUnder = BOARD_SIZE - (row + word.getScrabbleWord().length()); //space under of word
-	            result = extendsBoard(word, hand, result, col, row, 'v', spaceUnder);
-	        } 
-	    }
-	    return result;
-	}
-	/**
-	 * Gets the best result extending the word on board
-	 * @param word
-	 * @param hand
-	 * @param result
-	 * @param col
-	 * @param row
-	 * @param orientation
-	 * @param spaceLeft
-	 * @return
-	 */
-    private ScrabbleWord extendsBoard(ScrabbleWord word, char[] hand, ScrabbleWord result, int col, int row,
-            char orientation, int spaceLeft) {
+    public ScrabbleWord getBestWord(final ScrabbleWord word, final char[] hand) {
+        ScrabbleWord result = new ScrabbleWord();
+        //Case 1: Best result is an extension of the word on board (suffix)
+        result = extendsBoard(word, hand, result);
+        //Case 2: Best result is perpendicular, starting with a letter already on the board
+        result = startOnBoard(word, hand, root, "", result);
+        if (result.getPoints() > 0) {
+            return result; //return here to save on time
+        }
+        //Case 3: Best result is perpendicular, starting before a letter on the board
+        result = getPrefixes(hand, word, "", root, result, 0);
+        return result;
+    }
+    /**
+     * Gets the best result extending the word on board
+     * @param word
+     * @param hand
+     * @param result
+     * @param col
+     * @param row
+     * @param orientation
+     * @param spaceLeft
+     * @return
+     */
+    private ScrabbleWord extendsBoard(ScrabbleWord word, char[] hand, ScrabbleWord result) {
+        final int col = word.getStartColumn();
+        final int row = word.getStartRow();
+        final int spaceLeft;
+        final char orientation;
+        if (word.getOrientation() == 'h') {
+            spaceLeft = BOARD_SIZE - (col + word.getScrabbleWord().length()); //space right of word
+            orientation = 'h';
+        } else {
+            spaceLeft = BOARD_SIZE - (row + word.getScrabbleWord().length()); //space under of word
+            orientation = 'v';
+        }
         Entry letterOnBoard = getEntryWithPrefix(word.getScrabbleWord(), root); //Entry at end of word on board
         if (letterOnBoard != null) {
-            ScrabbleWord possibleResult = getSuffixes(letterOnBoard, word.getScrabbleWord(), spaceLeft, hand, result, col, row, orientation);
-            if (possibleResult == null || possibleResult.equals(word)) {
-                return result;
-            } else {
-                return possibleResult;
-            }
+            result = getSuffixes(letterOnBoard, word.getScrabbleWord(), spaceLeft, hand, result, word, col, row, orientation);
         }
         return result;
     }
@@ -210,20 +193,28 @@ public class Trie {
         }
         return null;
     }
-    private ScrabbleWord getPrefixes(final char[] hand, final int spaceBefore, final ScrabbleWord word, final String str,
-                                                final Entry current, ScrabbleWord result) {
-        if (spaceBefore == 0) {
+    private ScrabbleWord getPrefixes(final char[] hand, final ScrabbleWord word, final String str,
+                                                final Entry current, ScrabbleWord result, final int iteration) {
+        final int spaceBefore;
+        if (word.getOrientation() == 'h') {
+            spaceBefore = word.getStartRow();
+        } else {
+            spaceBefore = word.getStartColumn();
+        }
+        if (spaceBefore <= iteration) {
             result = startOnBoard(word, hand, current, str, result);
             return result;
         } else {
             result = startOnBoard(word, hand, current, str, result);
+            char lastChar = '!';
             for (int i = 0; i < hand.length; i++) {
-                if (hand[i] != '!' && hand[i] != '_') {
-                    final char c = hand[i];
+                final char c = hand[i];
+                if (c != '!' && c != '_' && c != lastChar) {
+                    lastChar = c;
                     hand[i] = '!';
                     final Entry next = current.children[getIndex(c)];
                     if (next != null ) {
-                        result = getPrefixes(hand, spaceBefore - 1, word, str + next, next, result);
+                        result = getPrefixes(hand, word, str + next, next, result, iteration + 1);
                     }
                     hand[i] = c;
                 }
@@ -247,39 +238,28 @@ public class Trie {
         final String wordOnBoard = word.getScrabbleWord();
         for (int i = 0; i < wordOnBoard.length(); i++) {
             final char c = wordOnBoard.charAt(i);
-            final int index = getIndex(c);
-            final Entry firstLetter = current.children[index];
-            if (current.children[index] != null) {
+            final Entry firstLetter = current.children[getIndex(c)];
+            if (current.children[getIndex(c)] != null) {
                 if (word.getOrientation() == 'v') {
                     final int spaceLeft = BOARD_SIZE - (word.getStartColumn() + 1);
-                    final int newRow = word.getScrabbleWord().indexOf(firstLetter.toString()) + word.getStartRow();
+                    final int newRow = i + word.getStartRow();
                     final int newCol = word.getStartColumn() - prefix.length();
                     if (newCol < 0) {
-                        return result;
+                        continue;
                     }
-                    result = getSuffixes(firstLetter, prefix + firstLetter, spaceLeft, hand, result, newCol, newRow, 'h');
+                    result = getSuffixes(firstLetter, prefix + firstLetter, spaceLeft, hand, result, word, newCol, newRow, 'h');
                 } else {
                     final int spaceLeft = BOARD_SIZE - (word.getStartRow() + 1);
-                    final int newCol = word.getScrabbleWord().indexOf(firstLetter.toString()) + word.getStartColumn();
+                    final int newCol = i + word.getStartColumn();
                     final int newRow = word.getStartRow() - prefix.length();
                     if (newRow < 0) {
-                        return result;
+                        continue;
                     }
-                    result = getSuffixes(firstLetter, prefix + firstLetter, spaceLeft, hand, result, newCol, newRow, 'v');
+                    result = getSuffixes(firstLetter, prefix + firstLetter, spaceLeft, hand, result, word, newCol, newRow, 'v');
                 }
             }
         }
         return result;
-    }
-    /**
-     * Given a char, it returns it's index in alphabet. Assumes char is A-Z
-     * @param c
-     * @return
-     */
-    private int getIndex(final char c) {
-        final byte b = (byte) (Character.hashCode(c));
-        final int index = (b + OFFSET) % ALPHABET.length;
-        return index;
     }
     /**
      * if current entry is the end of a word
@@ -305,30 +285,51 @@ public class Trie {
      * @return
      */
     private ScrabbleWord getSuffixes(final Entry currentEntry, final String currentString, final int spaceLeft,
-	                                  final char[] hand, final ScrabbleWord currentResult,
-	                                  final int startCol, final int startRow, final char orientation) {
-	    ScrabbleWord result = currentResult;
+                                      final char[] hand, final ScrabbleWord currentResult, final ScrabbleWord word,
+                                      final int startCol, final int startRow, final char orientation) {
+        ScrabbleWord result = currentResult;
         if (currentEntry.isWordEnd) {
-	        final ScrabbleWord newWord = new ScrabbleWord(currentString, startRow, startCol, orientation);
-	        if (result == null) {
-	            result = newWord;
-	        } else if (newWord.compareTo(result) < 0) { 
-	            result = newWord;
-	        }
-	    }
-	    if (spaceLeft > 1) {
-	        for (int i = 0; i < hand.length; i++) {
-	            final char c = hand[i];
-	            if (c != '!' && c != '_') {
-	                hand[i] = '!';
-	                final Entry newEntry = currentEntry.children[getIndex(c)];
-	                if (newEntry != null) {
-	                    result = getSuffixes(newEntry, currentString + newEntry, spaceLeft - 1, hand, result, startCol, startRow, orientation);    
-	                }
-	                hand[i] = c;
-	            }
-	        }
-	    }
-	    return result;
-	}
+            final ScrabbleWord newWord = new ScrabbleWord(currentString, startRow, startCol, orientation);
+            if (result == null) {
+                result = newWord;
+            } else if (!newWord.equals(word) && newWord.compareTo(result) < 0) { 
+                result = newWord;
+            }
+        }
+        if (spaceLeft > 1) {
+            char lastChar = '!';
+            for (int i = 0; i < hand.length; i++) {
+                final char c = hand[i];
+                if (c != '!' && c != '_' && c != lastChar) {
+                    lastChar = c;
+                    hand[i] = '!';
+                    final Entry newEntry = currentEntry.children[getIndex(c)];
+                    if (newEntry != null) {
+                        result = getSuffixes(newEntry, currentString + newEntry, spaceLeft - 1, hand, result, word, startCol, startRow, orientation);    
+                    }
+                    hand[i] = c;
+                }
+            }
+        }
+        return result;
+    }
+    private int[] INDEXES = new int[Character.MAX_VALUE];
+    /**
+     * Initializes INDEXES to have each valid character's index in the alphabet
+     */
+    public void initializeIndexes() {
+        for (char c : ALPHABET) {
+            final byte b = (byte) (Character.hashCode(c));
+            final int index = (b + OFFSET) % ALPHABET.length;
+            INDEXES[c] = index;
+        }
+    }
+    /**
+     * Given a char, it returns it's index in alphabet. Assumes char is A-Z
+     * @param c
+     * @return
+     */
+    private int getIndex(final char c) {
+        return INDEXES[c];
+    }
 }
